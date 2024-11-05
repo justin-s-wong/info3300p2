@@ -1,0 +1,459 @@
+<html>
+
+</html>
+
+<head>
+    <link href="https://fonts.googleapis.com/css?family=Lato:400,700|Raleway:400,700" rel="stylesheet">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/topojson.v3.min.js"></script>
+
+    <style>
+        .gridlines line {
+            stroke: #bbb;
+        }
+
+        .gridlines .domain {
+            stroke: none;
+        }
+
+        .tooltip {
+            pointer-events: none;
+        }
+        .mouseover{
+            pointer-events: none;
+        }
+        /* .yearSlider
+        {
+            width: 100px;
+        } */
+    </style>
+
+    <title>INFO 3300 - Project 2 - Fedinard Nyanyo (fen7), Justin Wong (jsw345), Merry Zebro (mz289), Stephan Volynets
+        (svv6)</title>
+</head>
+
+<body>
+    <h2>INFO 3300 - Project 2 - Fedinard Nyanyo (fen7), Justin Wong (jsw345), Merry Zebro (mz289), Stephan Volynets
+        (svv6)</h2>
+    <p id="p1">
+        <input type="range" class="yearSlider" min="1960" max="2022" value="2022" width="1000px" step="1">
+        <span id="sliderValue">2022</span>
+        <svg id="mapArea" height="600" width="1500"></svg>
+        <!-- <g class="tooltip" visibility="hidden"></g> -->
+        <svg id="colorLegend" height="100" width="600" style="background: #fff; margin-top:30px"></svg>
+
+        <script>
+            // below code credited in codesource.js
+            // VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+
+            function drawLegend(legendSelector, legendColorScale) {
+                // This code should adapt to a variety of different kinds of color scales
+                //  Credit Prof. Rz if you are basing a legend on this structure, and note PERFORMANCE CONSIDERATIONS
+
+                // Shrink legend bar by 5 px inwards from sides of SVG
+                const offsets = {
+                    width: 50,
+                    top: 35,
+                    bottom: 24
+                };
+                // Number of integer 'pixel steps' to draw when showing continuous scales
+                // Warning, not using a canvas element so lots of rect tags will be created for low stepSize, causing issues with performance -- keep this large
+                const stepSize = 4;
+                // Extend the minmax by 0% in either direction to expose more features by default
+                const minMaxExtendPercent = 0;
+
+
+                const legend = d3.select(legendSelector);
+                const legendHeight = legend.attr("height");
+                const legendBarWidth = legend.attr("width") - (offsets.width * 2);
+                // add text to top left of color scale legend to say "Less CO2 Emissions"
+                legend.append("g")
+                    .attr("class", "text")
+                    .attr("transform", `translate(${offsets.width}, ${offsets.top / 2 - 5})`)
+                    .append("text")
+                    .text("Low Life Expectancy")
+                    .attr("dominant-baseline", "middle")
+                    .style("fill", "black")
+                    .style("font-family", "Monaco")
+                    .style("font-size", 15)
+                // add text to top right of color scale legend to say "More CO2 Emissions"
+                legend.append("g")
+                    .attr("class", "text")
+                    .attr("transform", `translate(${legendBarWidth + offsets.width}, ${offsets.top / 2 - 5})`)
+                    .append("text")
+                    .text("High Life Expectancy")
+                    .attr("text-anchor", "end")
+                    .attr("dominant-baseline", "middle")
+                    .style("fill", "black")
+                    .style("font-family", "Monaco")
+                    .style("font-size", 15)
+                const legendMinMax = d3.extent(legendColorScale.domain());
+                // recover the min and max values from most kinds of numeric scales
+                const minMaxExtension = (legendMinMax[1] - legendMinMax[0]) * minMaxExtendPercent;
+                const barHeight = legendHeight - offsets.top - offsets.bottom;
+
+                // In this case the "data" are pixels, and we get numbers to use in colorScale
+                // Use this to make axis labels
+                let barScale = d3.scaleLinear().domain([legendMinMax[0] - minMaxExtension,
+                legendMinMax[1] + minMaxExtension])
+                    .range([0, legendBarWidth]);
+                let barAxis = d3.axisBottom(barScale).ticks(10).tickFormat(d3.format(".2r"));
+
+                // Place for bar slices to live
+                let bar = legend.append("g")
+                    .attr("class", "legend colorbar")
+                    .attr("transform", `translate(${offsets.width},${offsets.top})`)
+
+                // ****** SWITCHES FOR DIFFERENT SCALE TYPES ******
+
+                // Check if we're using a binning scale - if so, we make blocks of color
+                if (legendColorScale.hasOwnProperty('thresholds') || legendColorScale.hasOwnProperty('quantiles')) {
+                    // Get the thresholds
+                    let thresholds = [];
+                    if (legendColorScale.hasOwnProperty('thresholds')) { thresholds = legendColorScale.thresholds() }
+                    else { thresholds = legendColorScale.quantiles() }
+
+                    const barThresholds = [legendMinMax[0], ...thresholds, legendMinMax[1]];
+
+                    // Use the quantile breakpoints plus the min and max of the scale as tick values
+                    barAxis.tickValues(barThresholds);
+
+                    // Draw rectangles between the threshold segments
+                    for (let i = 0; i < barThresholds.length - 1; i++) {
+                        let dataStart = barThresholds[i];
+                        let dataEnd = barThresholds[i + 1];
+                        let pixelStart = barAxis.scale()(dataStart);
+                        let pixelEnd = barAxis.scale()(dataEnd);
+
+                        bar.append("rect")
+                            .attr("x", pixelStart)
+                            .attr("y", 0)
+                            .attr("width", pixelEnd - pixelStart)
+                            .attr("height", barHeight)
+                            .style("fill", legendColorScale((dataStart + dataEnd) / 2.0));
+                    }
+                }
+                // Else if we have a continuous / roundable scale
+                //  In an ideal world you might construct a custom gradient mapped to the scale
+                //  For this one, we use a hack of making stepped rects
+                else if (legendColorScale.hasOwnProperty('rangeRound')) {
+                    // NOTE: The barAxis may round min and max values to make them pretty
+                    // ** This also means there is a risk of the legend going beyond scale bounds
+                    // We need to use the barAxis min and max just to be sure the bar is complete
+                    //    Using barAxis.scale().invert() goes from *axis* pixels to data values easily
+                    // ** We also need to create patches for the scale if the labels exceed bounds
+                    //     (floating point comparisons risky for small data ranges,but not a big deal
+                    //      because patches will be indistinguishable from actual scale bottom)
+                    // It's likely that scale clamping will actually do this for us elegantly
+                    // ...but better to be safer and patch the regions anyways
+
+                    for (let i = 0; i < legendBarWidth; i = i + stepSize) {
+
+                        let center = i + (stepSize / 2);
+                        let dataCenter = barAxis.scale().invert(center);
+
+                        // below normal scale bounds
+                        if (dataCenter < legendMinMax[0]) {
+                            bar.append("rect")
+                                .attr("x", i)
+                                .attr("y", 0)
+                                .attr("width", stepSize)
+                                .attr("height", barHeight)
+                                .style("fill", legendColorScale(legendMinMax[0]));
+                        }
+                        // within normal scale bounds
+                        else if (dataCenter < legendMinMax[1]) {
+                            bar.append("rect")
+                                .attr("x", i)
+                                .attr("y", 0)
+                                .attr("width", stepSize)
+                                .attr("height", barHeight)
+                                .style("fill", legendColorScale(dataCenter));
+                        }
+                        // above normal scale bounds
+                        else {
+                            bar.append("rect")
+                                .attr("x", i)
+                                .attr("y", 0)
+                                .attr("width", stepSize)
+                                .attr("height", barHeight)
+                                .style("fill", legendColorScale(legendMinMax[1]));
+                        }
+
+                    }
+                }
+                // Otherwise we have a nominal scale
+                else {
+                    let nomVals = legendColorScale.domain().sort();
+
+                    // Use a scaleBand to make blocks of color and simple labels
+                    let barScale = d3.scaleBand().domain(nomVals)
+                        .range([0, legendBarWidth])
+                        .padding(0.05);
+                    barAxis.scale(barScale);
+
+                    // Draw rectangles for each nominal entry
+                    nomVals.forEach(d => {
+                        bar.append("rect")
+                            .attr("x", barScale(d))
+                            .attr("y", 0)
+                            .attr("width", barScale.bandwidth())
+                            .attr("height", barHeight)
+                            .style("fill", legendColorScale(d));
+                    });
+                }
+                // DONE w/SWITCH
+
+                // Finally, draw legend labels
+                legend.append("g")
+                    .attr("class", "legend axis")
+                    .attr("transform", `translate(${offsets.width},${offsets.top + barHeight + 5})`)
+                    .call(barAxis);
+
+            }
+
+            // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            // above credited in codesource.js
+
+            const requestData = async function () {
+                // fetch data
+                let lifeData = await d3.csv('INFO 3300 P2 Life Expectancy.csv');
+                let mapData = await d3.json('countries-50m-p.json');
+                console.log(mapData);
+
+                let svg = d3.select("svg#mapArea");
+                // setting margins and map area
+                const height = svg.attr("height");
+                const width = svg.attr("width");
+
+                let land = topojson.feature(mapData, mapData.objects.land);
+                let countries = topojson.feature(mapData, mapData.objects.countries);
+                let countriesMesh = topojson.mesh(mapData, mapData.objects.countries);
+                var projection = d3.geoMercator().fitSize([width, height], land);
+                var path = d3.geoPath().projection(projection);
+
+                let quintiles = ["#8B0000","#CD5C5C","#FFD700","#9ACD32","#006400"];
+                const colorScale = d3.scaleQuantile()
+                                     .domain(mapData['life_expectancies'])
+                                     .range(quintiles);
+
+                let map = svg.append("g");
+                let landOutline = svg.selectAll("path.outline").data(land.features)
+                                     .join("path")
+                                     .attr("class", "outline")
+                                     .attr("fill", "lightgrey")
+                                     .attr("d", path);
+                let countriesMeshPath = map.append("path").datum(countriesMesh)
+                                           .attr("class", "countrymesh")
+                                           .attr("fill", "none")
+                                           .attr("stroke", "white")
+                                           .attr("stroke-width", "1")
+                                           .attr("d", path);
+
+                map.raise();
+                
+                // create an average life span from 1960 to 2022??
+
+                // creating functions for axes/gridlines and drawing axes and gridlines
+                // let leftAxis = d3.axisLeft(lifeScale).tickFormat( d => String(d))
+                // svg.append("g")
+                //     .attr("transform", `translate(${margins.left - 10}, ${margins.top})`)
+                //     .call(leftAxis)
+
+                // let leftGridlines = d3.axisLeft(lifeScale).tickFormat("").tickSize(-chartWidth - 10)
+                // svg.append("g")
+                //    .attr("class", "gridlines")
+                //    .attr("transform", `translate(${margins.left - 10}, ${margins.top})`)
+                //    .call(leftGridlines)
+
+                // let bottomAxis = d3.axisBottom()
+                // let bottomAxisG = svg.append("g")
+                //                      .attr("transform",`translate(${margins.left},${chartHeight+margins.top+10})`)
+
+                let tooltipWidth = 225;
+                let tooltipHeight = 40;
+                let momesh =  map.append("path")
+                                 .attr("class","mouseover outline")
+                                 .style("stroke", "black")
+                                 .style("stroke-width", 5)
+                                 .style("fill", "none")
+                                 .attr("d", "");
+                let tooltip = map.append("g")
+                                 .attr("class","tooltip")
+                                 .attr("visibility","hidden");
+                // let tooltip = d3.select("g.tooltip");
+                tooltip.append("rect")
+                       .attr("fill", "white")
+                       .attr("opacity", 1)
+                       .attr("x", -tooltipWidth / 2.0)
+                       .attr("y", 0)
+                       .attr("width",tooltipWidth)
+                       .attr("height",tooltipHeight)
+                let txt = tooltip.append("text")
+                                 .attr("fill", "black")
+                                 .attr("text-anchor","middle")
+                                 .attr("alignment-baseline","hanging")
+                                 .attr("x", 0)
+                                 .attr("y", 2)
+                                 .attr('font-size', 20)
+                                 .style("font-weight", "bold")
+                let txt2 = tooltip.append("text")
+                                 .attr("fill", "black")
+                                 .attr("text-anchor","middle")
+                                 .attr("alignment-baseline","hanging")
+                                 .attr("x", 0)
+                                 .attr("y", 22)
+                                 .attr('font-size', 20)
+
+                function mouseEntersCountry() {
+
+                    tooltip.style("visibility","visible")
+                    let yearKey = d3.select('span#sliderValue').text();
+
+                    let country = d3.select(this);
+                    console.log(country);
+                    let life_exp = country.datum().properties[yearKey];
+                    if (life_exp == undefined) life_exp = 'N/A';
+                    let name = country.datum().properties['name'];
+                    console.log(name);
+                    let id = country.datum().id
+                    console.log(id);
+                    
+                    txt.text(name);
+                    if (life_exp == "N/A") txt2.text("Life Expectancy: " + life_exp);
+                    else {
+                        txt2.text("Life Expectancy: " + d3.format(".2f")(life_exp))
+                            .attr("fill", colorScale(life_exp));
+                    }
+                                        
+                    // let bounds = path.bounds( country.datum() );   
+
+                    // let xPos = (bounds[0][0]+bounds[1][0])/2.0;
+                    // let yPos = bounds[1][1] + 10;
+                    
+                    tooltip.attr("transform",`translate(${width/4},${(height/4) * 3})`);
+                    
+                    var mo = topojson.mesh(mapData, mapData.objects.countries, function(a, b) { 
+                        return a.properties.name === name || b.properties.name === name;
+                    });
+                    momesh.datum(mo).attr("d", path)
+                    momesh.raise();
+                    tooltip.raise();
+
+                }
+
+                function mouseLeavesCountry() {
+
+                    tooltip.style("visibility","hidden");
+                
+                    let country = d3.select(this);
+                
+                    momesh.attr("d", "");
+                }
+
+                function updateMap(yearKey) {
+                    // let yearData = []
+                    // most common starting letter for each country
+                    // B, C, E, G, I, K, L, M, N, P, S, T, U
+                    // let startCountry = [['B',""],['C',""],['E',""],['G',""],['I',""],['K',""],['L',""],['M',""],['N',""],['P',""],['S',""],['T',""],['U',""]];
+                    // let index = 0;
+                    // data.forEach( (d) => {
+                    //     if (d[yearKey] != "") {
+                    //         let country = {"Country Name" : d["Country Name"], "Life Expectancy" : d[yearKey]}
+                    //         yearData.push(country);
+                    //         if (index < startCountry.length && d["Country Name"].charAt(0) == startCountry[index][0]) {
+                    //             startCountry[index][1] = d["Country Name"];
+                    //             index++;
+                    //         }
+                    //     }
+                    // })
+
+                    // console.log(startCountry);
+
+                    // const countries = d3.map(yearData, d => d['Country Name']) 
+                    // const countryScale = d3.scaleBand().domain(countries).range([0, mapWidth])
+                    //                                      .padding(0.05);
+
+                    // chartArea.selectAll("line.letter").data(startCountry)
+                    //    .join("line")
+                    //    .attr("class", "letter")
+                    //    .attr("x1", d => countryScale(d[1]))
+                    //    .attr("y1", 0)
+                    //    .attr("x2", d => countryScale(d[1]))
+                    //    .attr("y2", chartHeight)
+                    //    .attr("stroke", "lightgrey")
+                    //    .attr("stroke-width", 1)
+
+                    // chartArea.selectAll("text.letter").data(startCountry)
+                    //    .join("text")
+                    //    .attr("class", "letter")
+                    //    .attr("x", d => countryScale(d[1]))
+                    //    .attr("y", -10)
+                    //    .attr("text-anchor", "middle")
+                    //    .attr("font-size", "14px")
+                    //    .style("font-weight", "bold")
+                    //    .text(d => d[0]);
+
+                    // chartArea.selectAll('rect.bar').data(yearData)
+                    //          .join( enter => enter.append('rect')
+                    //                               .attr('class','bar')
+                    //                               .attr("fill", "green")
+                    //                               .attr("x", d => countryScale(d['Country Name']))
+                    //                               .attr("y", d => lifeScale(d['Life Expectancy']))
+                    //                               .attr("height", d => lifeScale(minLife) - lifeScale(d['Life Expectancy']))
+                    //                               .attr("width", countryScale.bandwidth())
+                    //                               .attr("opacity", 0) // Set opacity low, then animate to 1 to make them fade in
+                    //                               .call( enter => enter.transition()
+                    //                                             .attr('opacity', 1) ),
+                    //             update => update.call( update => update.transition()  // Animate resizing and movement
+                    //                                                 .attr("fill", "green")
+                    //                                                 .attr("x", d => countryScale(d['Country Name']))
+                    //                                                 .attr("y", d => lifeScale(d['Life Expectancy']))
+                    //                                                 .attr("height", d => lifeScale(0) - lifeScale(d['Life Expectancy']))
+                    //                                                 .attr("width", countryScale.bandwidth()) ),
+                    //             exit => exit.call( exit => exit.transition().attr('opacity',0).remove() ) ); // Animate opacity to fade out
+                    // chartArea.raise()
+                    //     map.raise();
+                    let countriesOutlines = map.selectAll("path.country").data(countries.features)
+                                               .join("path")
+                                               .attr("class", "country")
+                                               .attr("d", path)
+                                               .attr("stroke", "none")
+                                               .attr("fill", d => d.properties[yearKey] == undefined ? "lightgrey" : colorScale(d.properties[yearKey]))
+                                               .on('mouseover',  mouseEntersCountry)
+                                               .on('mouseout',  mouseLeavesCountry);
+                    map.raise();
+                    countriesMeshPath.raise();
+                }   
+
+                // const allKeys = lifeData.columns.slice(2, 65).sort();
+                // console.log(allKeys);
+                // allKeys.forEach( d => {
+                //     // For each year key, add a new button to the button bar
+                //     d3.select("div#button-bar")
+                //       .append("button")
+                //       .text( d )
+                //       .on("click", function() {
+                //         // When it's clicked, call updateBars to update the map
+                //         updateMap( d );
+                //       })
+                // });
+
+                d3.select("input.yearSlider").on("input", (event) =>  {
+                    let yearStr = String(event.target.valueAsNumber);
+                    d3.select('span#sliderValue').text(yearStr);
+                    updateMap(yearStr);    
+                })
+
+                // We do not want to start with a blank screen, so call it once
+                updateMap('2022');
+                // drawing legend
+                drawLegend("#colorLegend", colorScale);
+
+            }
+            requestData();
+        </script>
+    </p>
+</body>
+
+</html>
