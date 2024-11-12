@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Life Expectancy vs Population</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        .gridlines line {
+            stroke: #ccc;
+            stroke-opacity: 0.2;
+        }
+        .gridlines .domain {
+            stroke: none;
+        }
+        .tooltip {
+            position: absolute;
+            padding: 10px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            pointer-events: none;
+            font-family: sans-serif;
+            font-size: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .controls {
+            margin: 20px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 4px;
+        }
+        #yearSlider {
+            width: 300px;
+        }
+        .axis-label {
+            font-size: 12px;
+        }
+        .title {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .size-legend text {
+            font-size: 10px;
+        }
+
+        .circle{
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <input type="range" id="yearSlider" min="1960" max="2022" value="1960" step="1">
+        <span id="yearDisplay">1960</span>
+    </div>
+    <div id="visualization"></div>
+
+    <script>
+        const width = 800;  
+        const height = 800;
+        const margin = { top: 80, right: 100, bottom: 100, left: 100 };
+        const innerWidth = width - margin.left - margin.right;
+        const innerHeight = height - margin.top - margin.bottom;
+
+        const svg = d3.select("#visualization")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+        const g = svg.append("g")
+            .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+        const plotArea = g.append("g");
+
+        const titleGroup = svg.append("g")
+            .attr("transform", `translate(${width/2}, ${margin.top/2})`);
+
+        const tooltip = d3.select("body")
+            .append("div")
+            .attr("class", "tooltip")
+            .style("opacity", 0);
+
+        function createSizeLegend(scale, sizes) {
+            const legend = svg.append("g")
+                .attr("class", "size-legend")
+                .attr("transform", `translate(${width - margin.right + 50}, ${height/2})`);
+
+            legend.append("text")
+                .attr("x", -45)
+                .attr("y", -50)
+                .text("Population \n Size")
+                .style("font-size", "14px")
+                .style("font-weight", "bold");
+
+            sizes.forEach((size, i) => {
+                const y = i * 50;
+                
+                legend.append("circle")
+                    .attr("cy", y)
+                    .attr("r", scale(size))
+                    .attr("fill", "none")
+                    .attr("stroke", "black");
+
+                legend.append("text")
+                    .attr("x", 28)
+                    .attr("y", y + 5)
+                    .text(d3.format(".0s")(size).replace("G", "B"));
+                    
+            });
+        }
+
+        function update(data, year) {
+            const countryData = data.objects.countries.geometries
+                .filter(d => d.properties[year])
+                .map(d => ({
+                    name: d.properties.name,
+                    life: d.properties[year].life,
+                    population: d.properties[year].population
+                }));
+
+            const xScale = d3.scaleLog()
+                .domain([
+                    d3.min(countryData, d => d.population),
+                    d3.max(countryData, d => d.population)
+                ])
+                .range([10, innerWidth-20])
+
+            const yScale = d3.scaleLinear()
+                .domain([0, d3.max(countryData, d => d.life)])
+                .range([innerHeight, 0])
+
+            const radiusScale = d3.scaleSqrt()
+                .domain([
+                    d3.min(countryData, d => d.population),
+                    d3.max(countryData, d => d.population)
+                ])
+                .range([5, 25]);
+
+            const colorScale = d3.scaleOrdinal(d3.schemeTableau10);
+
+            svg.selectAll(".size-legend").remove();
+            const popExtent = d3.extent(countryData, d => d.population);
+            const legendSizes = [
+                popExtent[0],
+                (popExtent[1] - popExtent[0])/2 + popExtent[0],
+                popExtent[1]
+            ];
+            createSizeLegend(radiusScale, legendSizes);
+
+            plotArea.selectAll(".gridlines").remove();
+            
+            plotArea.append("g")
+                .attr("class", "gridlines")
+                .call(d3.axisLeft(yScale)
+                    .ticks(10)
+                    .tickSize(-innerWidth+10)
+                    .tickFormat(""));
+
+            plotArea.append("g")
+                .attr("class", "gridlines")
+                .attr("transform", `translate(0,${innerHeight})`)
+                .call(d3.axisBottom(xScale)
+                    .ticks(5)
+                    .tickSize(-innerHeight)
+                    .tickFormat(""));
+
+            const xAxis = d3.axisBottom(xScale)
+                .ticks(5)
+                .tickFormat(d => d3.format(".0s")(d).replace("G", "B"));
+
+            const yAxis = d3.axisLeft(yScale)
+                .ticks(10);
+
+            g.selectAll("g.x-axis").remove();
+            g.selectAll("g.y-axis").remove();
+            
+            g.append("g")
+                .attr("class", "x-axis")
+                .attr("transform", `translate(0,${innerHeight})`)
+                .call(xAxis)
+                .selectAll("text")
+                .style("text-anchor", "end")
+                .attr("dx", "-.8em")
+                .attr("dy", ".15em")
+                .attr("transform", "rotate(-45)");
+
+            g.append("g")
+                .attr("class", "y-axis")
+                .call(yAxis);
+
+            g.selectAll(".axis-label").remove();
+
+            g.append("text")
+                .attr("class", "axis-label")
+                .attr("text-anchor", "middle")
+                .attr("x", innerWidth/2)
+                .attr("y", innerHeight + margin.bottom/1.5)
+                .text("Population Size");
+
+            g.append("text")
+                .attr("class", "axis-label")
+                .attr("text-anchor", "middle")
+                .attr("transform", "rotate(-90)")
+                .attr("y", -margin.left/1.5)
+                .attr("x", -innerHeight/2)
+                .text("Life Expectancy (years)");
+
+            titleGroup.selectAll("text").remove();
+            titleGroup.append("text")
+                .attr("class", "title")
+                .attr("text-anchor", "middle")
+                .text(`Life Expectancy vs. Population, ${year}`);
+
+            const circles = plotArea.selectAll("circle")
+                .data(countryData, d => d.name); 
+
+            circles.exit()
+                .transition()
+                .duration(200)
+                .attr("r", 0)
+                .remove();
+
+            const circlesEnter = circles.enter()
+                .append("circle")
+                .attr("class", "circle") 
+                .attr("fill", d => colorScale(d.name))
+                .attr("opacity", 0.7)
+                .attr("cx", d => xScale(d.population))
+                .attr("cy", d => yScale(d.life))
+                .attr("r", 0);
+
+            circles.merge(circlesEnter)
+                .transition()
+                .duration(200)
+                .attr("cx", d => xScale(d.population))
+                .attr("cy", d => yScale(d.life))
+                .attr("r", d => radiusScale(d.population))
+                .call(() => plotArea.selectAll("circle").raise());  
+                
+
+            plotArea.selectAll("circle")
+                .on("mouseover", function(event, d) {
+                    d3.select(this)
+                        .attr("opacity", 1)
+                        .attr("stroke", "black")
+                        .attr("stroke-width", 2);
+                    
+                    tooltip.transition()
+                        .duration(200)
+                        .style("opacity", .9);
+                    
+                    tooltip.html(`
+                        <strong>${d.name}</strong><br/>
+                        Year: ${year}<br/>
+                        Population: ${d3.format(",")(d.population)}<br/>
+                        Life Expectancy: ${d.life.toFixed(2)} years
+                    `)
+                        .style("left", (event.pageX + 10) + "px")
+                        .style("top", (event.pageY - 10) + "px");
+                })
+                .on("mouseout", function() {
+                    d3.select(this)
+                        .attr("opacity", 0.7)
+                        .attr("stroke", "none");
+                    
+                    tooltip.transition()
+                        .duration(500)
+                        .style("opacity", 0);
+                });
+
+            d3.select("#yearDisplay").text(year);
+        }
+
+        d3.json('combined_data.json').then(data => {
+            update(data, "1960");
+
+            const slider = d3.select("#yearSlider");
+        
+            slider.on("input", function() {
+                update(data, this.value);
+            });
+        })
+    </script>
+</body>
+</html>
