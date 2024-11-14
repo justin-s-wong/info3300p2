@@ -8,53 +8,82 @@
     <script src="https://d3js.org/topojson.v3.min.js"></script>
 
     <style>
-        .gridlines line {
-            stroke: #bbb;
-        }
-
-        .gridlines .domain {
-            stroke: none;
-        }
-
         .tooltip {
             pointer-events: none;
         }
+
         .mouseover{
             pointer-events: none;
         }
-        /* .yearSlider
-        {
-            width: 100px;
-        } */
+
+        .sliderContainer {
+            margin: auto;
+            width: 50%;
+            padding: 15px;
+        }
+
+        .buttonContainer {
+            margin: auto;
+            width: 50%;
+            padding-top: 10px
+        }
+
+        .sliderValue {
+            margin: auto;
+            width: 50%;
+            border: 2px solid black;
+            padding: 10px;
+        }        
+
+        .instruction {
+            margin: auto;
+            width: 50%;
+            padding-bottom: 10px;
+        }        
     </style>
 
-    <title>INFO 3300 - Project 2 - Fedinard Nyanyo (fen7), Justin Wong (jsw345), Merry Zebro (mz289), Stephan Volynets
-        (svv6)</title>
+    <title>INFO 3300 - Project 2 - Fedinard Nyanyo (fen7), Justin Wong (jsw345), Merry Zebro (mz289), Stephan Volynets (svv6)</title>
 </head>
 
 <body>
     <h2>INFO 3300 - Project 2 - Fedinard Nyanyo (fen7), Justin Wong (jsw345), Merry Zebro (mz289), Stephan Volynets
         (svv6)</h2>
     <p id="p1">
-        <input type="range" class="yearSlider" min="1960" max="2022" value="2022" width="1000px" step="1">
-        <span id="sliderValue">2022</span>
-        <svg id="mapArea" height="600" width="1500"></svg>
-        <!-- <g class="tooltip" visibility="hidden"></g> -->
-        <svg id="colorLegend" height="100" width="600" style="background: #fff; margin-top:30px"></svg>
+        <div class="buttonContainer" style="width: 400px; height: 50px; text-align:center;">
+            <button id="life" class="button">Show Life Expectancy</button>
+            <button id="pop" class="button">Show Population Number</button>
+        </div>
+        <div class="sliderContainer" style="width: 800px; height: 50px">
+            <input type="range" class="yearSlider" min="1960" max="2022" value="1960" style="width: 800px;" step="1"></input>
+        </div>
+        <div class="sliderValue" style="width: 100px; height: 20px; text-align: center">Year: 1960</div>
+        <div class="buttonContainer" style="width: 100px; height: 50px; text-align:center;">
+            <button id="play" class="button">Play</button>
+            <button id="stop" class="button">Stop</button>
+        </div>
+        <div class="instruction" style="width: 300px; height: 20px; text-align: center">Press space to pause/unpause slider animation</div>
+        <svg id="mapArea" height="750" width="1500"></svg>
 
         <script>
+            // TODO: Choose different colors for popScale
+            // TODO: Fix comments to address population on map
+
+            var showLife = true; // Variable that tells us what we want to show on the map
+            var mapTransitionTime = 700; // Variable to hold how long we want the transition between colors to take
+
+
             // below code credited in codesource.js
             // VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
 
-            function drawLegend(legendSelector, legendColorScale) {
+            // modified Prof. Rz drawLegend() code to make it appear inside of my map's svg canvas
+            function drawLegend(mapSelector, legendColorScale, height, width) {
                 // This code should adapt to a variety of different kinds of color scales
                 //  Credit Prof. Rz if you are basing a legend on this structure, and note PERFORMANCE CONSIDERATIONS
 
-                // Shrink legend bar by 5 px inwards from sides of SVG
                 const offsets = {
                     width: 50,
-                    top: 35,
-                    bottom: 24
+                    top: 25,
+                    bottom: 25
                 };
                 // Number of integer 'pixel steps' to draw when showing continuous scales
                 // Warning, not using a canvas element so lots of rect tags will be created for low stepSize, causing issues with performance -- keep this large
@@ -63,30 +92,31 @@
                 const minMaxExtendPercent = 0;
 
 
-                const legend = d3.select(legendSelector);
-                const legendHeight = legend.attr("height");
-                const legendBarWidth = legend.attr("width") - (offsets.width * 2);
-                // add text to top left of color scale legend to say "Less CO2 Emissions"
-                legend.append("g")
-                    .attr("class", "text")
-                    .attr("transform", `translate(${offsets.width}, ${offsets.top / 2 - 5})`)
-                    .append("text")
-                    .text("Low Life Expectancy")
-                    .attr("dominant-baseline", "middle")
-                    .style("fill", "black")
-                    .style("font-family", "Monaco")
-                    .style("font-size", 15)
-                // add text to top right of color scale legend to say "More CO2 Emissions"
-                legend.append("g")
-                    .attr("class", "text")
-                    .attr("transform", `translate(${legendBarWidth + offsets.width}, ${offsets.top / 2 - 5})`)
-                    .append("text")
-                    .text("High Life Expectancy")
-                    .attr("text-anchor", "end")
-                    .attr("dominant-baseline", "middle")
-                    .style("fill", "black")
-                    .style("font-family", "Monaco")
-                    .style("font-size", 15)
+                const mapArea = d3.select(mapSelector);
+                const legendHeight = height;
+                const legendBarWidth = width - (offsets.width * 2);
+
+                // add text to top left and top right of color scale legend
+                mapArea.append("g")
+                       .attr("class", "text")
+                       .attr("transform", `translate(${offsets.width}, ${10})`)
+                       .append("text")
+                       .attr("dominant-baseline", "middle")
+                       .style("fill", "black")
+                       .style("font-family", "Monaco")
+                       .style("font-size", 15)
+                       .text(showLife ? "Low Life Expectancy" : "Low Pop. Number")
+                mapArea.append("g")
+                       .attr("class", "text")
+                       .attr("transform", `translate(${legendBarWidth + offsets.width}, ${10})`)
+                       .append("text")
+                       .attr("text-anchor", "end")
+                       .attr("dominant-baseline", "middle")
+                       .style("fill", "black")
+                       .style("font-family", "Monaco")
+                       .style("font-size", 15)
+                       .text(showLife ? "High Life Expectancy" : "High Pop. Number")
+                
                 const legendMinMax = d3.extent(legendColorScale.domain());
                 // recover the min and max values from most kinds of numeric scales
                 const minMaxExtension = (legendMinMax[1] - legendMinMax[0]) * minMaxExtendPercent;
@@ -94,15 +124,29 @@
 
                 // In this case the "data" are pixels, and we get numbers to use in colorScale
                 // Use this to make axis labels
-                let barScale = d3.scaleLinear().domain([legendMinMax[0] - minMaxExtension,
-                legendMinMax[1] + minMaxExtension])
+                let barScale = undefined;
+                if (showLife) {
+                    barScale = d3.scaleLinear().domain([legendMinMax[0] - minMaxExtension,
+                        legendMinMax[1] + minMaxExtension])
                     .range([0, legendBarWidth]);
-                let barAxis = d3.axisBottom(barScale).ticks(10).tickFormat(d3.format(".2r"));
+                }
+                else {
+                    barScale = d3.scaleLog().domain([legendMinMax[0] - minMaxExtension,
+                        legendMinMax[1] + minMaxExtension])
+                    .range([0, legendBarWidth]);
+                }
+                let barAxis = showLife ? d3.axisBottom(barScale).ticks(10).tickFormat(d3.format("d"))
+                                       : d3.axisBottom(barScale).ticks(10).tickFormat(d => {
+                                            let str = String(Math.round(d));
+                                            if (str.length < 7) return d3.format(",")(Math.round(d));
+                                            if (str.length < 10) return str.substring(0, str.length - 6) + "M";
+                                            else return str.substring(0, str.length - 9) + "B"
+                                       });
 
-                // Place for bar slices to live
-                let bar = legend.append("g")
-                    .attr("class", "legend colorbar")
-                    .attr("transform", `translate(${offsets.width},${offsets.top})`)
+                // Place for bar slices to live, in our case we place them at the bottom left of the selected canvas
+                let bar = mapArea.append("g")
+                                 .attr("class", "legend colorbar")
+                                 .attr("transform", `translate(${offsets.width},${10 + barHeight})`)
 
                 // ****** SWITCHES FOR DIFFERENT SCALE TYPES ******
 
@@ -114,6 +158,7 @@
                     else { thresholds = legendColorScale.quantiles() }
 
                     const barThresholds = [legendMinMax[0], ...thresholds, legendMinMax[1]];
+                    console.log(barThresholds);
 
                     // Use the quantile breakpoints plus the min and max of the scale as tick values
                     barAxis.tickValues(barThresholds);
@@ -204,10 +249,10 @@
                 }
                 // DONE w/SWITCH
 
-                // Finally, draw legend labels
-                legend.append("g")
+                // Finally, draw legend labels at bottom left of the selected canvas
+                mapArea.append("g")
                     .attr("class", "legend axis")
-                    .attr("transform", `translate(${offsets.width},${offsets.top + barHeight + 5})`)
+                    .attr("transform", `translate(${offsets.width},${legendHeight})`)
                     .call(barAxis);
 
             }
@@ -217,8 +262,7 @@
 
             const requestData = async function () {
                 // fetch data
-                let lifeData = await d3.csv('INFO 3300 P2 Life Expectancy.csv');
-                let mapData = await d3.json('countries-50m-p.json');
+                let mapData = await d3.json('combined_data.json');
                 console.log(mapData);
 
                 let svg = d3.select("svg#mapArea");
@@ -226,16 +270,12 @@
                 const height = svg.attr("height");
                 const width = svg.attr("width");
 
+                // drawing world map outlines on svg canvas
                 let land = topojson.feature(mapData, mapData.objects.land);
                 let countries = topojson.feature(mapData, mapData.objects.countries);
                 let countriesMesh = topojson.mesh(mapData, mapData.objects.countries);
                 var projection = d3.geoMercator().fitSize([width, height], land);
                 var path = d3.geoPath().projection(projection);
-
-                let quintiles = ["#8B0000","#CD5C5C","#FFD700","#9ACD32","#006400"];
-                const colorScale = d3.scaleQuantile()
-                                     .domain(mapData['life_expectancies'])
-                                     .range(quintiles);
 
                 let map = svg.append("g");
                 let landOutline = svg.selectAll("path.outline").data(land.features)
@@ -249,39 +289,42 @@
                                            .attr("stroke", "white")
                                            .attr("stroke-width", "1")
                                            .attr("d", path);
-
                 map.raise();
+
+                // create colorScale where domain is a list of life expectancies
+                let life_quintiles = ["#8B0000","#CD5C5C","#FFD700","#9ACD32","#006400"];
+                const lifeScale = d3.scaleQuantile()
+                                    .domain(mapData['life_expectancies'])
+                                    .range(life_quintiles);
                 
-                // create an average life span from 1960 to 2022??
-
-                // creating functions for axes/gridlines and drawing axes and gridlines
-                // let leftAxis = d3.axisLeft(lifeScale).tickFormat( d => String(d))
-                // svg.append("g")
-                //     .attr("transform", `translate(${margins.left - 10}, ${margins.top})`)
-                //     .call(leftAxis)
-
-                // let leftGridlines = d3.axisLeft(lifeScale).tickFormat("").tickSize(-chartWidth - 10)
-                // svg.append("g")
-                //    .attr("class", "gridlines")
-                //    .attr("transform", `translate(${margins.left - 10}, ${margins.top})`)
-                //    .call(leftGridlines)
-
-                // let bottomAxis = d3.axisBottom()
-                // let bottomAxisG = svg.append("g")
-                //                      .attr("transform",`translate(${margins.left},${chartHeight+margins.top+10})`)
-
+                // create colorScale where domain is a list of population size
+                let pop_quintiles = ["#7FCDBB", "#41B6C4", "#FDAE61", "#F46D43", "#D73027"]
+                // get list of every population value
+                let pops = [];
+                mapData.objects.countries.geometries.forEach(function (country) {
+                    for (let currYear = 1960; currYear <= 2022; currYear++) {
+                        if (typeof country.properties[String(currYear)] == "object") pops.push(country.properties[String(currYear)].population);
+                    }
+                })
+                const popScale = d3.scaleQuantile()
+                                   .domain(pops)
+                                   .range(pop_quintiles);
+                // console.log(popScale.quintiles())
+                console.log(d3.extent(pops));
+                                
+                // creating text box at bottom left of map describing country and corresponding life expectancy
                 let tooltipWidth = 225;
                 let tooltipHeight = 40;
                 let momesh =  map.append("path")
                                  .attr("class","mouseover outline")
                                  .style("stroke", "black")
-                                 .style("stroke-width", 5)
+                                 .style("stroke-width", 3)
                                  .style("fill", "none")
                                  .attr("d", "");
                 let tooltip = map.append("g")
                                  .attr("class","tooltip")
-                                 .attr("visibility","hidden");
-                // let tooltip = d3.select("g.tooltip");
+                                 .attr("visibility","hidden")
+                                 .attr("transform",`translate(${width/4 - 50},${(height/4) * 3 - 50})`);
                 tooltip.append("rect")
                        .attr("fill", "white")
                        .attr("opacity", 1)
@@ -305,34 +348,91 @@
                                  .attr("y", 22)
                                  .attr('font-size', 20)
 
+                // creating slider to select year, as well as an associated axis for visual clarity
+                let divSlider = d3.select("div.sliderContainer");
+                let sliderWidth = Number(divSlider.style("width").substring(0, divSlider.style("width").length - 2));
+                let sliderHeight = Number(divSlider.style("height").substring(0, divSlider.style("height").length - 2));
+                let xScale = d3.scaleLinear().domain([1960, 2022])
+                                             .range([10, sliderWidth-6]);
+                let xAxis = d3.axisBottom(xScale);
+                xAxis.tickFormat(d => d % 5 == 0 ? String(d) : "").ticks(63);
+                let canvas = divSlider.append("svg")
+                                      .attr("width", sliderWidth)
+                                      .attr("height", sliderHeight)
+                                      .attr("class", "axis")
+                                      .style('overflow', "visible")
+                canvas.append("g").attr("transform", `translate(${0}, ${sliderHeight/3-10})`)
+                                  .attr("class", "axis")
+                                  .call(xAxis)
+                // if year is divisible by 5, make its axis tick longer
+                d3.selectAll("g.axis g.tick line")
+                            .attr("y2", function(d){
+                                if ( d % 5 == 0 ) 
+                                    return 10;
+                                else
+                                    return 4;
+                            });
+                // move axis tick label accordingly
+                d3.selectAll("g.axis g.tick text")
+                            .attr("y", function(d){
+                                if ( d % 5 == 0 )
+                                    return 15;
+                                else
+                                    return 4;
+                            });
+
+                var selectedCountry = undefined; // Variable to hold most recent country that was moused/hovered over
+                var year = 1960; // Variable to hold the current year
+
+                // when mouse enters country, make thick black outline around country
+                // also show country name and life expectancy in text box (tooltip)
                 function mouseEntersCountry() {
 
                     tooltip.style("visibility","visible")
-                    let yearKey = d3.select('span#sliderValue').text();
 
-                    let country = d3.select(this);
-                    console.log(country);
-                    let life_exp = country.datum().properties[yearKey];
-                    if (life_exp == undefined) life_exp = 'N/A';
-                    let name = country.datum().properties['name'];
-                    console.log(name);
-                    let id = country.datum().id
-                    console.log(id);
+                    selectedCountry = d3.select(this);
+                    let country_obj = selectedCountry == undefined ? undefined : selectedCountry.datum().properties[String(year)];
+                    let life_exp = country_obj == undefined ? undefined 
+                                   : typeof country_obj == "object" ? country_obj.life
+                                   : country_obj;
+                    let pop = country_obj == undefined ? undefined
+                              : typeof country_obj == "object" ? country_obj.population : undefined;
+                    let name = selectedCountry.datum().properties['name'];
+                    let id = selectedCountry.datum().id
                     
                     txt.text(name);
-                    if (life_exp == "N/A") txt2.text("Life Expectancy: " + life_exp);
-                    else {
-                        txt2.text("Life Expectancy: " + d3.format(".2f")(life_exp))
-                            .attr("fill", colorScale(life_exp));
+                    
+                    // if no life expectancy data for country, then life expectancy is N/A
+                    // color text according to colorScale
+                    if (showLife) {
+                        if (life_exp == undefined) {
+                        txt2.text("Life Expectancy: N/A")
+                            .transition()
+                            .duration(mapTransitionTime)
+                            .attr("fill", "lightgrey");
+                        }
+                        else {
+                            txt2.text("Life Expectancy: " + d3.format(".2f")(life_exp))
+                                .transition()
+                                .duration(mapTransitionTime)
+                                .attr("fill", lifeScale(life_exp));
+                        }
                     }
-                                        
-                    // let bounds = path.bounds( country.datum() );   
-
-                    // let xPos = (bounds[0][0]+bounds[1][0])/2.0;
-                    // let yPos = bounds[1][1] + 10;
-                    
-                    tooltip.attr("transform",`translate(${width/4},${(height/4) * 3})`);
-                    
+                    else {
+                        if (pop == undefined) {
+                            txt2.text("Population: N/A")
+                                .transition()
+                                .duration(mapTransitionTime)
+                                .attr("fill", "lightgrey");
+                        }
+                        else {
+                            txt2.text("Population: " + d3.format(",")(pop))
+                                .transition()
+                                .duration(mapTransitionTime)
+                                .attr("fill", popScale(pop));
+                        }
+                    }
+                                                                                
                     var mo = topojson.mesh(mapData, mapData.objects.countries, function(a, b) { 
                         return a.properties.name === name || b.properties.name === name;
                     });
@@ -342,6 +442,8 @@
 
                 }
 
+                // when mouse leaves country, remove thick black outline around country
+                // also make text box (tooltip) disappear
                 function mouseLeavesCountry() {
 
                     tooltip.style("visibility","hidden");
@@ -351,105 +453,154 @@
                     momesh.attr("d", "");
                 }
 
-                function updateMap(yearKey) {
-                    // let yearData = []
-                    // most common starting letter for each country
-                    // B, C, E, G, I, K, L, M, N, P, S, T, U
-                    // let startCountry = [['B',""],['C',""],['E',""],['G',""],['I',""],['K',""],['L',""],['M',""],['N',""],['P',""],['S',""],['T',""],['U',""]];
-                    // let index = 0;
-                    // data.forEach( (d) => {
-                    //     if (d[yearKey] != "") {
-                    //         let country = {"Country Name" : d["Country Name"], "Life Expectancy" : d[yearKey]}
-                    //         yearData.push(country);
-                    //         if (index < startCountry.length && d["Country Name"].charAt(0) == startCountry[index][0]) {
-                    //             startCountry[index][1] = d["Country Name"];
-                    //             index++;
-                    //         }
-                    //     }
-                    // })
-
-                    // console.log(startCountry);
-
-                    // const countries = d3.map(yearData, d => d['Country Name']) 
-                    // const countryScale = d3.scaleBand().domain(countries).range([0, mapWidth])
-                    //                                      .padding(0.05);
-
-                    // chartArea.selectAll("line.letter").data(startCountry)
-                    //    .join("line")
-                    //    .attr("class", "letter")
-                    //    .attr("x1", d => countryScale(d[1]))
-                    //    .attr("y1", 0)
-                    //    .attr("x2", d => countryScale(d[1]))
-                    //    .attr("y2", chartHeight)
-                    //    .attr("stroke", "lightgrey")
-                    //    .attr("stroke-width", 1)
-
-                    // chartArea.selectAll("text.letter").data(startCountry)
-                    //    .join("text")
-                    //    .attr("class", "letter")
-                    //    .attr("x", d => countryScale(d[1]))
-                    //    .attr("y", -10)
-                    //    .attr("text-anchor", "middle")
-                    //    .attr("font-size", "14px")
-                    //    .style("font-weight", "bold")
-                    //    .text(d => d[0]);
-
-                    // chartArea.selectAll('rect.bar').data(yearData)
-                    //          .join( enter => enter.append('rect')
-                    //                               .attr('class','bar')
-                    //                               .attr("fill", "green")
-                    //                               .attr("x", d => countryScale(d['Country Name']))
-                    //                               .attr("y", d => lifeScale(d['Life Expectancy']))
-                    //                               .attr("height", d => lifeScale(minLife) - lifeScale(d['Life Expectancy']))
-                    //                               .attr("width", countryScale.bandwidth())
-                    //                               .attr("opacity", 0) // Set opacity low, then animate to 1 to make them fade in
-                    //                               .call( enter => enter.transition()
-                    //                                             .attr('opacity', 1) ),
-                    //             update => update.call( update => update.transition()  // Animate resizing and movement
-                    //                                                 .attr("fill", "green")
-                    //                                                 .attr("x", d => countryScale(d['Country Name']))
-                    //                                                 .attr("y", d => lifeScale(d['Life Expectancy']))
-                    //                                                 .attr("height", d => lifeScale(0) - lifeScale(d['Life Expectancy']))
-                    //                                                 .attr("width", countryScale.bandwidth()) ),
-                    //             exit => exit.call( exit => exit.transition().attr('opacity',0).remove() ) ); // Animate opacity to fade out
-                    // chartArea.raise()
-                    //     map.raise();
+                // add mouseover and mouseout events for each country
+                // update life expectancy colors for each country and animate this color transition
+                // update textbox (tooltip) so that the color of the life expectancy text transitions according to the selected country's color
+                function updateMap() {                   
                     let countriesOutlines = map.selectAll("path.country").data(countries.features)
-                                               .join("path")
-                                               .attr("class", "country")
-                                               .attr("d", path)
-                                               .attr("stroke", "none")
-                                               .attr("fill", d => d.properties[yearKey] == undefined ? "lightgrey" : colorScale(d.properties[yearKey]))
-                                               .on('mouseover',  mouseEntersCountry)
-                                               .on('mouseout',  mouseLeavesCountry);
+                        .join(
+                            // when new data is entered, color countries by their new life expectancy data
+                            enter => enter.append("path")
+                                            .attr("fill", d => {
+                                                if (d.properties[String(year)] == undefined) return "lightgrey";
+                                                else if (showLife) {
+                                                    if (typeof d.properties[String(year)] == "object") return lifeScale(d.properties[String(year)].life);
+                                                    else return lifeScale(d.properties[String(year)]);
+                                                }
+                                                else {
+                                                    if (typeof d.properties[String(year)] == "object") return popScale(d.properties[String(year)].population);
+                                                    else return "lightgrey"
+                                                }
+                                            })
+                                            .attr("opacity", 0)
+                                            .call( enter => enter.transition().duration(mapTransitionTime)
+                                                                .attr("opacity", 1)),
+                            update => update.call( update => update.transition().duration(mapTransitionTime).attr("fill", d => {
+                                                if (d.properties[String(year)] == undefined) return "lightgrey";
+                                                else if (showLife) {
+                                                    if (typeof d.properties[String(year)] == "object") return lifeScale(d.properties[String(year)].life);
+                                                    else return lifeScale(d.properties[String(year)]);
+                                                }
+                                                else {
+                                                    if (typeof d.properties[String(year)] == "object") return popScale(d.properties[String(year)].population);
+                                                    else return "lightgrey"
+                                                }
+                                            })),
+                            // when old data leaves, get rid of that country's previous color
+                            exit => exit.call( exit => exit.transition().duration(mapTransitionTime).attr('opacity', 0).remove())
+                        )
+                        .attr("class", "country")
+                        .attr("d", path)
+                        .attr("stroke", "none")
+                        .on('mouseover',  mouseEntersCountry)
+                        .on('mouseout',  mouseLeavesCountry)
+
+                    // update textbox (tooltip) so that the color of the life expectancy text transitions to current life expectancy
+                    let country_obj = selectedCountry == undefined ? undefined : selectedCountry.datum().properties[String(year)];
+                    if (showLife) {
+                        let life_exp = country_obj == undefined ? undefined 
+                                   : typeof country_obj == "object" ? country_obj.life
+                                   : country_obj;
+                                   if (life_exp == undefined) {
+                        txt2.text("Life Expectancy: N/A")
+                            .transition()
+                            .duration(mapTransitionTime)
+                            .attr("fill", "lightgrey");
+                        }
+                        else {
+                            txt2.text("Life Expectancy: " + d3.format(".2f")(life_exp))
+                                .transition()
+                                .duration(mapTransitionTime)
+                                .attr("fill", lifeScale(life_exp));
+                        }
+                    }
+                    else {
+                        let pop = country_obj == undefined ? undefined
+                                  : typeof country_obj == "object" ? country_obj.population 
+                                  : undefined;
+                        if (pop == undefined) {
+                            txt2.text("Population: N/A")
+                                .transition()
+                                .duration(mapTransitionTime)
+                                .attr("fill", "lightgrey");
+                        }
+                        else {
+                            txt2.text("Population: " + d3.format(",")(pop))
+                                .transition()
+                                .duration(mapTransitionTime)
+                                .attr("fill", popScale(pop));
+                        }
+                    }
                     map.raise();
                     countriesMeshPath.raise();
+                    momesh.raise()
+                    // drawing legend at bottom left of our canvas containing the world map
                 }   
 
-                // const allKeys = lifeData.columns.slice(2, 65).sort();
-                // console.log(allKeys);
-                // allKeys.forEach( d => {
-                //     // For each year key, add a new button to the button bar
-                //     d3.select("div#button-bar")
-                //       .append("button")
-                //       .text( d )
-                //       .on("click", function() {
-                //         // When it's clicked, call updateBars to update the map
-                //         updateMap( d );
-                //       })
-                // });
+                drawLegend("#mapArea", lifeScale, 75, 425);
 
+                // whenever user interacts with slider
+                // update year, update textbox containing the current year, call updateMap()
                 d3.select("input.yearSlider").on("input", (event) =>  {
-                    let yearStr = String(event.target.valueAsNumber);
-                    d3.select('span#sliderValue').text(yearStr);
-                    updateMap(yearStr);    
+                    year = event.target.valueAsNumber;
+                    d3.select('div.sliderValue').text("Year: " + year);
+                    updateMap();    
                 })
 
                 // We do not want to start with a blank screen, so call it once
-                updateMap('2022');
-                // drawing legend
-                drawLegend("#colorLegend", colorScale);
+                updateMap();
 
+                // animate slider
+                let animate = true;
+                let sliderTransitionTime = 2000;
+                // call function every two seconds
+                setInterval(function () {
+                    // enter if-statement when we we want to animate slider
+                    if (animate) {
+                        year += 1; // increment year
+                        if (year == 2023) year = 1960; // if year is 2023, reset back to 1960
+                        d3.select('div.sliderValue').text("Year: " + year); // update textbox containing current year
+                        updateMap(); // call update map
+                        d3.select("input.yearSlider").property("value", year); // update current value of slider to move it 
+                    }
+                }, sliderTransitionTime)
+
+                // adding eventlistener to pause/unpause animation when space is pressed
+                d3.select("body").on("keydown", function(event) {
+                    if(event.keyCode === 32) {
+                        event.preventDefault();
+                        animate = !animate;
+                    }
+                })
+
+                d3.select("#play").on("click", () => {
+                    // Start animating the slider
+                    animate = true;
+                });
+                d3.select("#stop").on("click", () => {
+                    // Pause animation
+                    animate = false;
+                });
+
+                d3.select("#life").on("click", () => {
+                    // Show life expectancy on map
+                    showLife = true;
+                    updateMap();
+                    // remove previous legend and add new legend
+                    svg.selectAll("g.text").remove();
+                    svg.selectAll("g.legend").remove();
+                    drawLegend("#mapArea", lifeScale, 75, 425);
+                });
+                d3.select("#pop").on("click", () => {
+                    // Show population number on map
+                    showLife = false;
+                    updateMap();
+                    // remove previous legend and add new legend
+                    svg.selectAll("g.text").remove();
+                    svg.selectAll("g.legend").remove();
+                    drawLegend("#mapArea", popScale, 75, 425);
+                });
+                
             }
             requestData();
         </script>
