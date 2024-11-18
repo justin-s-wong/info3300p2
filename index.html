@@ -610,9 +610,10 @@
                     }
                     if(event.keyCode === 13) {
                         event.preventDefault();
-                        year = Number(d3.select("input#yearText").property("value")); 
+                        let currYear = Number(d3.select("input#yearText").property("value")); 
                         // check if value inside textbox is a valid year
-                        if (Number(year) >= 1960 && Number(year) <= 2022) {
+                        if (currYear >= 1960 && currYear <= 2022) {
+                            year = currYear;
                             d3.select('div.sliderValue').text("Year: " + year); // update textbox containing current year
                             d3.select("input.yearSlider").property("value", year); // update current value of slider to move it 
                             updateMap();
