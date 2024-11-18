@@ -72,9 +72,18 @@
             <button id="play" class="button">Play</button>
             <button id="stop" class="button">Stop</button>
         </div>
-        <div class="instruction" style="width: 400px; height: 20px; text-align: center">- Press space to pause/unpause slider animation</div>
-        <div class="instruction" style="width: 300px; height: 20px; text-align: center">- Zoom in and pan</div>
-        <div class="instruction" style="width: 400px; height: 20px; text-align: center">- Click on individual countries to zoom in on them</div>
+        <div class="instruction" style="width: 450px; height: 150px; text-align: center">
+            - Press space to pause/unpause slider animation
+            </br>
+            </br>
+            - Can zoom in and pan on map
+            </br>
+            </br>
+            - Click on individual countries to zoom in on them
+            </br>
+            </br>
+            - Hover over individual countries to see more specific information
+        </div>
         <svg id="mapArea" height="750" width="1500"></svg>
 
         <script>
@@ -337,7 +346,7 @@
                 let tooltip = svg.append("g")
                                  .attr("class","tooltip")
                                  .attr("visibility","hidden")
-                                 .attr("transform",`translate(${width/4 - 50},${(height/4) * 3 - 50})`);
+                                 .attr("transform",`translate(${width/4 - 80},${(height/4) * 3 - 50})`);
                 tooltip.append("rect")
                        .attr("fill", "white")
                        .attr("opacity", 1)
