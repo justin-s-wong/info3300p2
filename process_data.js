@@ -36,6 +36,7 @@ const requestData = async function () {
     let geometries = mapData.objects.countries.geometries;
 
     function inputNewMapData(countryName, lifeIdx, mapIdx) {
+        // input dictionary with year and life expectancy into "properties" value in TopoJSON file
         let dict = {}
         dict["Country Name"] = countryName;
         for (let year = 1960; year <= 2022; year++) {
@@ -55,6 +56,8 @@ const requestData = async function () {
         for (let j = 0; j < lifeData.length; j++) {
             let mapCountry = geometries[i].properties.name;
             // removing any accents
+            // switch statement to see if any countries we are looking at
+            // is a special case where names wildly differ
             switch (mapCountry.normalize('NFD').replace(/\p{Diacritic}/gu, '')) {
                 case "Dem. Rep. Congo":
                     inputNewMapData('Democratic Republic of the Congo', j, i);
@@ -125,6 +128,7 @@ const requestData = async function () {
                     foundCountry = true;
                     break;
                 default:
+                    // check if country names are abbreviated or are exactly the same
                     if (mapCountry[mapCountry.length - 1] == '.') {
                         if (lifeData[j]['Country Name'].toLowerCase().includes(mapCountry.substring(0, mapCountry.length - 1).toLowerCase())) {
                             inputNewMapData(lifeData[j]['Country Name'], j, i);
@@ -140,6 +144,8 @@ const requestData = async function () {
             if (foundCountry) break;
         }
     }
+    // store the list of every recorded life expectancy, the minimum life expectancy, 
+    // and maximum life expectancy into their own variables in the TopoJSON file
     mapData['max_life_exp'] = maxLife;
     mapData['min_life_exp'] = minLife;
     mapData['life_expectancies'] = lifeExpectancies
