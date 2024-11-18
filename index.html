@@ -28,6 +28,12 @@
             padding-top: 10px
         }
 
+        .yearBox {
+            margin: auto;
+            width: 50%;
+            padding-bottom: 10px
+        }
+
         .sliderValue {
             margin: auto;
             width: 50%;
@@ -38,7 +44,7 @@
         .instruction {
             margin: auto;
             width: 50%;
-            padding-bottom: 10px;
+            padding: 10px;
         }        
     </style>
 
@@ -49,9 +55,14 @@
     <h2>INFO 3300 - Project 2 - Fedinard Nyanyo (fen7), Justin Wong (jsw345), Merry Zebro (mz289), Stephan Volynets
         (svv6)</h2>
     <p id="p1">
-        <div class="buttonContainer" style="width: 400px; height: 50px; text-align:center;">
+        <div class="buttonContainer" style="width: 300px; height: 50px; text-align:center;">
             <button id="life" class="button">Show Life Expectancy</button>
-            <button id="pop" class="button">Show Population Number</button>
+            <button id="pop" class="button">Show Population</button>
+            <button id="resetZoom" class="button">Reset Zoom</button>
+        </div>
+        <div class="yearBox" style="width: 150px; height: 20px; text-align: center">
+            Input (valid) year:
+            <input type="text" id="yearText" name="yearText" style="width: 150px;">
         </div>
         <div class="sliderContainer" style="width: 800px; height: 50px">
             <input type="range" class="yearSlider" min="1960" max="2022" value="1960" style="width: 800px;" step="1"></input>
@@ -61,7 +72,9 @@
             <button id="play" class="button">Play</button>
             <button id="stop" class="button">Stop</button>
         </div>
-        <div class="instruction" style="width: 300px; height: 20px; text-align: center">Press space to pause/unpause slider animation</div>
+        <div class="instruction" style="width: 400px; height: 20px; text-align: center">- Press space to pause/unpause slider animation</div>
+        <div class="instruction" style="width: 300px; height: 20px; text-align: center">- Zoom in and pan</div>
+        <div class="instruction" style="width: 400px; height: 20px; text-align: center">- Click on individual countries to zoom in on them</div>
         <svg id="mapArea" height="750" width="1500"></svg>
 
         <script>
@@ -98,18 +111,27 @@
                 const legendBarWidth = width - (offsets.width * 2);
 
                 // add text to top left and top right of color scale legend
+                let leftText = mapArea.append("g")
+                leftText.append("rect")
+                        .attr("fill", "white")
+                        .attr("opacity", 1)
+                        .attr("x", -10)
+                        .attr("y", -10)
+                        .attr("width",legendBarWidth + 20)
+                        .attr("height",legendHeight + 20)
+                        .attr("stroke", "black")
+                leftText.attr("class", "text")
+                        .attr("transform", `translate(${offsets.width}, ${15})`)
+                        .append("text")
+                        .attr("dominant-baseline", "middle")
+                        .style("fill", "black")
+                        .style("font-family", "Monaco")
+                        .style("font-size", 15)
+                        .text(showLife ? "Low Life Expectancy" : "Low Pop. Number")
+                
                 mapArea.append("g")
                        .attr("class", "text")
-                       .attr("transform", `translate(${offsets.width}, ${10})`)
-                       .append("text")
-                       .attr("dominant-baseline", "middle")
-                       .style("fill", "black")
-                       .style("font-family", "Monaco")
-                       .style("font-size", 15)
-                       .text(showLife ? "Low Life Expectancy" : "Low Pop. Number")
-                mapArea.append("g")
-                       .attr("class", "text")
-                       .attr("transform", `translate(${legendBarWidth + offsets.width}, ${10})`)
+                       .attr("transform", `translate(${legendBarWidth + offsets.width}, ${15})`)
                        .append("text")
                        .attr("text-anchor", "end")
                        .attr("dominant-baseline", "middle")
@@ -278,11 +300,6 @@
                 var projection = d3.geoMercator().fitSize([width, height], land);
                 var path = d3.geoPath().projection(projection);
                 let map = svg.append("g");
-                let landOutline = svg.selectAll("path.outline").data(land.features)
-                                     .join("path")
-                                     .attr("class", "outline")
-                                     .attr("fill", "lightgrey")
-                                     .attr("d", path);
                 let countriesMeshPath = map.append("path").datum(countriesMesh)
                                            .attr("class", "countrymesh")
                                            .attr("fill", "none")
@@ -311,23 +328,24 @@
                                    .range(pop_quintiles);
                                 
                 // creating text box at bottom left of map describing country and corresponding life expectancy
-                let tooltipWidth = 225;
-                let tooltipHeight = 40;
+                let tooltipWidth = 325;
+                let tooltipHeight = 50;
                 let momesh =  map.append("path")
-                                 .attr("class","mouseover outline")
+                                 .attr("class","mouseover")
                                  .style("stroke", "black")
                                  .style("stroke-width", 3)
                                  .style("fill", "none")
                                  .attr("d", "");
-                let tooltip = map.append("g")
+                let tooltip = svg.append("g")
                                  .attr("class","tooltip")
                                  .attr("visibility","hidden")
                                  .attr("transform",`translate(${width/4 - 50},${(height/4) * 3 - 50})`);
                 tooltip.append("rect")
                        .attr("fill", "white")
                        .attr("opacity", 1)
+                       .attr("stroke", "black")
                        .attr("x", -tooltipWidth / 2.0)
-                       .attr("y", 0)
+                       .attr("y", -tooltipHeight / 7.0 + 2.5)
                        .attr("width",tooltipWidth)
                        .attr("height",tooltipHeight)
                 let txt = tooltip.append("text")
@@ -577,16 +595,30 @@
                         year += 1; // increment year
                         if (year == 2023) year = 1960; // if year is 2023, reset back to 1960
                         d3.select('div.sliderValue').text("Year: " + year); // update textbox containing current year
-                        updateMap(); // call update map
                         d3.select("input.yearSlider").property("value", year); // update current value of slider to move it 
+                        updateMap(); // call update map
+                        tooltip.raise();
+                        svg.selectAll("g.text").raise();
+                        svg.selectAll("g.legend").raise();
                     }
                 }, sliderTransitionTime)
 
                 // adding eventlistener to pause/unpause animation when space is pressed
+                // and to set the year when enter is pressed
                 d3.select("body").on("keydown", function(event) {
                     if(event.keyCode === 32) {
                         event.preventDefault();
                         animate = !animate;
+                    }
+                    if(event.keyCode === 13) {
+                        event.preventDefault();
+                        year = Number(d3.select("input#yearText").property("value")); 
+                        // check if value inside textbox is a valid year
+                        if (Number(year) >= 1960 && Number(year) <= 2022) {
+                            d3.select('div.sliderValue').text("Year: " + year); // update textbox containing current year
+                            d3.select("input.yearSlider").property("value", year); // update current value of slider to move it 
+                            updateMap();
+                        }
                     }
                 })
 
@@ -620,6 +652,82 @@
                     svg.selectAll("g.legend").remove();
                     drawLegend("#mapArea", popScale, 75, 425);
                 });
+
+                // handle zooming
+                var zoom = d3.zoom()
+                    .scaleExtent([1,20])
+                    .translateExtent([[-50,-50],[width+50,height+50]])  // to lock to edges
+                    .on("zoom", mapZoomed);
+  
+                svg.call(zoom);
+
+                svg.call(zoom.transform, d3.zoomIdentity);
+
+                function mapZoomed({transform}) {         
+                    // Transform the group object to reflect the zoom action
+                    map.attr("transform", transform.toString() );
+                
+                    // Divide by scale to make sure strokes remain a consistent width during zooming
+                    map.select("path.countrymesh")
+                       .style("stroke-width", 1 / transform.k);
+                    map.select("path.country")
+                       .style("stroke-width", 1 / transform.k);
+                    momesh.style("stroke-width", 3 / transform.k);
+                    
+                    
+                    // keep legend and textbox above other elements in map
+                    tooltip.raise();
+                    svg.selectAll("g.text").raise();
+                    svg.selectAll("g.legend").raise();
+                }
+
+                d3.select("#resetZoom").on("click", () => {
+                    // Reset zoom
+                    svg.transition().duration(1000).call(zoom.transform, d3.zoomIdentity);
+                });
+
+                map.selectAll("path.country").on("click",clicked);
+                
+                // below code credited in codesource.js
+                // VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
+
+                function clicked(event, d) {
+            
+                    // geoPath generators have a few extra functions. .bounds returns a pixel rectangle bounding the shape you give it
+                    let bounds = path.bounds(d.geometry); // get bounds for clicked state/county
+                    let dx = bounds[1][0] - bounds[0][0]; // width of state/county
+                    let dy = bounds[1][1] - bounds[0][1]; // height of state/county
+                    let x = (bounds[0][0] + bounds[1][0]) / 2; // center x of state/county
+                    let y = (bounds[0][1] + bounds[1][1]) / 2; // center y of state/county
+            
+                    // We want to make sure scale is within 1-10 when we click, so things don't zoom too far or too little
+                    // To compute zoom, we want to make sure the bounding box "just" fits onscreen.
+                    // dx / mapWidth gets us the portion of the screen the shape takes up without any zoom at all
+                    //  the lower dx/mapWidth is, the more we need to zoom because the shape is smaller
+                    // We find the max of dx/mapWidth, dy/mapHeight because we don't want to zoom farther (smaller values need more zoom)
+                    // We do 1 or 0.9 divided by dx/mapWidth because we need larger numbers to zoom in. 0.9 allows us to pad things a bit
+                    let scale = Math.max(1, Math.min(10, 0.9 / Math.max( dx / width, 
+                                                                        dy / height )));
+            
+                    // Think of the translate like a delta describing how much we need to move the map to move a point to a desired position
+                    // Simplistically, it works like (desired position) - (current position) = (translation)
+                    // In this case mapWidth/2, the center of the screen is the desired place for our viewport
+                    // x*scale is the position we want to move to the center (scale is there because we need to move more when zoomed in)
+                    let translate = [width / 2 - x * scale, height / 2 - y * scale];
+            
+                    // It's hard to programmatically adjust a zoom. The best way is to take the Identity (zoom transform where nothing is changed)
+                    //  and then modify it using a .translate and .scale
+                    let newTransform = d3.zoomIdentity
+                                        .translate(translate[0],translate[1])
+                                        .scale(scale);
+                    // We can apply a new transform to the screen by using .call(zoom.tranform, newTransform)
+                    // This is kinda the same thing as running zoom.transform(newTransform), but the chaining with .call allows us to add an animation
+                    svg.transition().duration(1000).call(zoom.transform, newTransform);
+            
+                }
+
+                // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                // above credited in codesource.js
                 
             }
             requestData();
