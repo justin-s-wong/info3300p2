@@ -60,8 +60,8 @@
             <button id="pop" class="button">Show Population</button>
             <button id="resetZoom" class="button">Reset Zoom</button>
         </div>
-        <div class="yearBox" style="width: 150px; height: 20px; text-align: center">
-            Input (valid) year:
+        <div class="yearBox" style="width: 275px; height: 20px; text-align: center">
+            Input (valid) year and press 'Enter' key:
             <input type="text" id="yearText" name="yearText" style="width: 37.5px;">
         </div>
         <div class="sliderContainer" style="width: 800px; height: 50px">
@@ -113,9 +113,9 @@
                 leftText.append("rect")
                         .attr("fill", "white")
                         .attr("opacity", 1)
-                        .attr("x", -10)
+                        .attr("x", -15)
                         .attr("y", -10)
-                        .attr("width",legendBarWidth + 20)
+                        .attr("width",legendBarWidth + 30)
                         .attr("height",legendHeight + 20)
                         .attr("stroke", "black")
                 leftText.attr("class", "text")
