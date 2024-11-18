@@ -65,12 +65,13 @@
         <svg id="mapArea" height="750" width="1500"></svg>
 
         <script>
-            // TODO: Choose different colors for popScale
-            // TODO: Fix comments to address population on map
+            // TODO: Zoom around functionality
+            // TODO: Textbox to input value for year
 
-            var showLife = true; // Variable that tells us what we want to show on the map
+            // Variable that tells us what data we want to show on the map: Life expectancy or Population
+            // default to life expectancy when page is loaded
+            var showLife = true; 
             var mapTransitionTime = 700; // Variable to hold how long we want the transition between colors to take
-
 
             // below code credited in codesource.js
             // VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV
@@ -78,7 +79,7 @@
             // modified Prof. Rz drawLegend() code to make it appear inside of my map's svg canvas
             function drawLegend(mapSelector, legendColorScale, height, width) {
                 // This code should adapt to a variety of different kinds of color scales
-                //  Credit Prof. Rz if you are basing a legend on this structure, and note PERFORMANCE CONSIDERATIONS
+                // Credit Prof. Rz if you are basing a legend on this structure, and note PERFORMANCE CONSIDERATIONS
 
                 const offsets = {
                     width: 50,
@@ -143,7 +144,7 @@
                                             else return str.substring(0, str.length - 9) + "B"
                                        });
 
-                // Place for bar slices to live, in our case we place them at the bottom left of the selected canvas
+                // Place for bar slices to live, in our case we place them at the top left of the selected canvas
                 let bar = mapArea.append("g")
                                  .attr("class", "legend colorbar")
                                  .attr("transform", `translate(${offsets.width},${10 + barHeight})`)
@@ -158,7 +159,6 @@
                     else { thresholds = legendColorScale.quantiles() }
 
                     const barThresholds = [legendMinMax[0], ...thresholds, legendMinMax[1]];
-                    console.log(barThresholds);
 
                     // Use the quantile breakpoints plus the min and max of the scale as tick values
                     barAxis.tickValues(barThresholds);
@@ -249,7 +249,7 @@
                 }
                 // DONE w/SWITCH
 
-                // Finally, draw legend labels at bottom left of the selected canvas
+                // Finally, draw legend labels at top left of the selected canvas
                 mapArea.append("g")
                     .attr("class", "legend axis")
                     .attr("transform", `translate(${offsets.width},${legendHeight})`)
@@ -265,6 +265,7 @@
                 let mapData = await d3.json('combined_data.json');
                 console.log(mapData);
 
+                // canvas to hold map
                 let svg = d3.select("svg#mapArea");
                 // setting margins and map area
                 const height = svg.attr("height");
@@ -276,7 +277,6 @@
                 let countriesMesh = topojson.mesh(mapData, mapData.objects.countries);
                 var projection = d3.geoMercator().fitSize([width, height], land);
                 var path = d3.geoPath().projection(projection);
-
                 let map = svg.append("g");
                 let landOutline = svg.selectAll("path.outline").data(land.features)
                                      .join("path")
@@ -309,8 +309,6 @@
                 const popScale = d3.scaleQuantile()
                                    .domain(pops)
                                    .range(pop_quintiles);
-                // console.log(popScale.quintiles())
-                console.log(d3.extent(pops));
                                 
                 // creating text box at bottom left of map describing country and corresponding life expectancy
                 let tooltipWidth = 225;
@@ -372,7 +370,7 @@
                                 else
                                     return 4;
                             });
-                // move axis tick label accordingly
+                // if year is divisible by 5, move axis tick label accordingly to appear below elongated tick
                 d3.selectAll("g.axis g.tick text")
                             .attr("y", function(d){
                                 if ( d % 5 == 0 )
@@ -385,11 +383,12 @@
                 var year = 1960; // Variable to hold the current year
 
                 // when mouse enters country, make thick black outline around country
-                // also show country name and life expectancy in text box (tooltip)
+                // also show country name and life expectancy or population in text box (tooltip)
                 function mouseEntersCountry() {
 
                     tooltip.style("visibility","visible")
 
+                    // get current life expectancy or population data
                     selectedCountry = d3.select(this);
                     let country_obj = selectedCountry == undefined ? undefined : selectedCountry.datum().properties[String(year)];
                     let life_exp = country_obj == undefined ? undefined 
@@ -400,11 +399,13 @@
                     let name = selectedCountry.datum().properties['name'];
                     let id = selectedCountry.datum().id
                     
+                    // put name of country into textbox
                     txt.text(name);
                     
-                    // if no life expectancy data for country, then life expectancy is N/A
-                    // color text according to colorScale
+                    // if statement to check if we are showing population or life expectancy in textbox
                     if (showLife) {
+                        // if no life expectancy data for country, then life expectancy is N/A
+                        // color text according to colorScale
                         if (life_exp == undefined) {
                         txt2.text("Life Expectancy: N/A")
                             .transition()
@@ -419,6 +420,8 @@
                         }
                     }
                     else {
+                        // if no population data for country, then population is N/A
+                        // color text according to colorScale
                         if (pop == undefined) {
                             txt2.text("Population: N/A")
                                 .transition()
@@ -432,11 +435,14 @@
                                 .attr("fill", popScale(pop));
                         }
                     }
-                                                                                
+                    
+                    // make thick black outline around country
                     var mo = topojson.mesh(mapData, mapData.objects.countries, function(a, b) { 
                         return a.properties.name === name || b.properties.name === name;
                     });
                     momesh.datum(mo).attr("d", path)
+
+                    // make sure outline/textbox is above every other element in canvas
                     momesh.raise();
                     tooltip.raise();
 
@@ -454,12 +460,15 @@
                 }
 
                 // add mouseover and mouseout events for each country
-                // update life expectancy colors for each country and animate this color transition
-                // update textbox (tooltip) so that the color of the life expectancy text transitions according to the selected country's color
+                // update life expectancy/population colors for each country and animate this color transition
+                // update textbox (tooltip) so that the color of the life expectancy/population text transitions 
+                // according to the selected country's color
                 function updateMap() {                   
                     let countriesOutlines = map.selectAll("path.country").data(countries.features)
                         .join(
-                            // when new data is entered, color countries by their new life expectancy data
+                            // when new data is entered, color countries by their new life expectancy or population data
+                            // depending on what we are currently showing
+                            // transition to new color
                             enter => enter.append("path")
                                             .attr("fill", d => {
                                                 if (d.properties[String(year)] == undefined) return "lightgrey";
@@ -474,7 +483,7 @@
                                             })
                                             .attr("opacity", 0)
                                             .call( enter => enter.transition().duration(mapTransitionTime)
-                                                                .attr("opacity", 1)),
+                                                                 .attr("opacity", 1)),
                             update => update.call( update => update.transition().duration(mapTransitionTime).attr("fill", d => {
                                                 if (d.properties[String(year)] == undefined) return "lightgrey";
                                                 else if (showLife) {
@@ -495,9 +504,13 @@
                         .on('mouseover',  mouseEntersCountry)
                         .on('mouseout',  mouseLeavesCountry)
 
-                    // update textbox (tooltip) so that the color of the life expectancy text transitions to current life expectancy
+                    // update textbox (tooltip) so that the color of the life expectancy/population text transitions to current data
                     let country_obj = selectedCountry == undefined ? undefined : selectedCountry.datum().properties[String(year)];
+
+                    // if statement to check if we currently showing life expectancy or population
                     if (showLife) {
+                        // if no life expectancy data for country, then life expectancy is N/A
+                        // update text color according to colorScale
                         let life_exp = country_obj == undefined ? undefined 
                                    : typeof country_obj == "object" ? country_obj.life
                                    : country_obj;
@@ -515,6 +528,8 @@
                         }
                     }
                     else {
+                        // if no population data for country, then population is N/A
+                        // update text color according to colorScale
                         let pop = country_obj == undefined ? undefined
                                   : typeof country_obj == "object" ? country_obj.population 
                                   : undefined;
@@ -534,16 +549,18 @@
                     map.raise();
                     countriesMeshPath.raise();
                     momesh.raise()
-                    // drawing legend at bottom left of our canvas containing the world map
                 }   
 
+                // drawing legend at top left of our canvas containing the world map
                 drawLegend("#mapArea", lifeScale, 75, 425);
 
                 // whenever user interacts with slider
-                // update year, update textbox containing the current year, call updateMap()
+                // update year, update textbox containing the current year and colors of country by calling updateMap()
                 d3.select("input.yearSlider").on("input", (event) =>  {
                     year = event.target.valueAsNumber;
+                    // update value of slider
                     d3.select('div.sliderValue').text("Year: " + year);
+                    // update map
                     updateMap();    
                 })
 
@@ -585,17 +602,20 @@
                 d3.select("#life").on("click", () => {
                     // Show life expectancy on map
                     showLife = true;
+                    // call updateMap() to show life expectancy data
                     updateMap();
-                    // remove previous legend and add new legend
+                    // remove previous legend and add new legend for life expectancy data
                     svg.selectAll("g.text").remove();
                     svg.selectAll("g.legend").remove();
                     drawLegend("#mapArea", lifeScale, 75, 425);
                 });
+
                 d3.select("#pop").on("click", () => {
-                    // Show population number on map
+                    // Show population on map
                     showLife = false;
+                    // call updateMap() to show population data
                     updateMap();
-                    // remove previous legend and add new legend
+                    // remove previous legend and add new legend for population data
                     svg.selectAll("g.text").remove();
                     svg.selectAll("g.legend").remove();
                     drawLegend("#mapArea", popScale, 75, 425);
