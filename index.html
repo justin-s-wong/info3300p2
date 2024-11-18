@@ -78,8 +78,6 @@
         <svg id="mapArea" height="750" width="1500"></svg>
 
         <script>
-            // TODO: Zoom around functionality
-            // TODO: Textbox to input value for year
 
             // Variable that tells us what data we want to show on the map: Life expectancy or Population
             // default to life expectancy when page is loaded
@@ -658,9 +656,9 @@
                     .scaleExtent([1,20])
                     .translateExtent([[-50,-50],[width+50,height+50]])  // to lock to edges
                     .on("zoom", mapZoomed);
-  
                 svg.call(zoom);
 
+                // call initially so map is by default zoomed out
                 svg.call(zoom.transform, d3.zoomIdentity);
 
                 function mapZoomed({transform}) {         
@@ -681,6 +679,7 @@
                     svg.selectAll("g.legend").raise();
                 }
 
+                // reset view/zoom of map
                 d3.select("#resetZoom").on("click", () => {
                     // Reset zoom
                     svg.transition().duration(1000).call(zoom.transform, d3.zoomIdentity);
@@ -730,7 +729,9 @@
                 // above credited in codesource.js
                 
             }
+
             requestData();
+
         </script>
     </p>
 </body>
