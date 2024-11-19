@@ -664,7 +664,7 @@
                 // handle zooming
                 var zoom = d3.zoom()
                     .scaleExtent([1,200])
-                    .translateExtent([[-50,-50],[width+50,height+50]])  // to lock to edges
+                    .translateExtent([[0,0],[width,height]])  // to lock to edges
                     .on("zoom", mapZoomed);
                 svg.call(zoom);
 
