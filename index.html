@@ -55,23 +55,6 @@
     <h2>INFO 3300 - Project 2 - Fedinard Nyanyo (fen7), Justin Wong (jsw345), Merry Zebro (mz289), Stephan Volynets
         (svv6)</h2>
     <p id="p1">
-        <div class="buttonContainer" style="width: 300px; height: 50px; text-align:center;">
-            <button id="life" class="button">Show Life Expectancy</button>
-            <button id="pop" class="button">Show Population</button>
-            <button id="resetZoom" class="button">Reset Zoom</button>
-        </div>
-        <div class="yearBox" style="width: 275px; height: 20px; text-align: center">
-            Input (valid) year and press 'Enter' key:
-            <input type="text" id="yearText" name="yearText" style="width: 37.5px;">
-        </div>
-        <div class="sliderContainer" style="width: 800px; height: 50px">
-            <input type="range" class="yearSlider" min="1960" max="2022" value="1960" style="width: 800px;" step="1"></input>
-        </div>
-        <div class="sliderValue" style="width: 100px; height: 20px; text-align: center">Year: 1960</div>
-        <div class="buttonContainer" style="width: 100px; height: 50px; text-align:center;">
-            <button id="play" class="button">Play</button>
-            <button id="stop" class="button">Stop</button>
-        </div>
         <div class="instruction" style="width: 450px; height: 150px; text-align: center">
             - Press space to pause/unpause slider animation
             </br>
@@ -83,6 +66,23 @@
             </br>
             </br>
             - Hover over individual countries to see more specific information
+        </div>
+        <div class="buttonContainer" style="width: 300px; height: 50px; text-align:center;">
+            <button id="life" class="button">Show Life Expectancy</button>
+            <button id="pop" class="button">Show Population</button>
+            <button id="resetZoom" class="button">Reset Zoom</button>
+        </div>
+        <div class="yearBox" style="width: 275px; height: 50px; text-align: center">
+            Input (valid) year and press 'Enter' key:
+            <input type="text" id="yearText" name="yearText" style="width: 37.5px;">
+        </div>
+        <div class="sliderValue" style="width: 100px; height: 20px; text-align: center">Year: 1960</div>
+        <div class="buttonContainer" style="width: 100px; height: 25px; text-align:center;">
+            <button id="play" class="button">Play</button>
+            <button id="stop" class="button">Stop</button>
+        </div>
+        <div class="sliderContainer" style="width: 800px; height: 60px">
+            <input type="range" class="yearSlider" min="1960" max="2022" value="1960" style="width: 800px;" step="1"></input>
         </div>
         <svg id="mapArea" height="750" width="1500"></svg>
 
