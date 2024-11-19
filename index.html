@@ -133,8 +133,9 @@
                         .attr("dominant-baseline", "middle")
                         .style("fill", "black")
                         .style("font-family", "Monaco")
-                        .style("font-size", 15)
+                        .style("font-size", 13)
                         .text(showLife ? "Low Life Expectancy" : "Low Pop. Number")
+                        .attr("x", -13)
                 
                 mapArea.append("g")
                        .attr("class", "text")
@@ -144,8 +145,9 @@
                        .attr("dominant-baseline", "middle")
                        .style("fill", "black")
                        .style("font-family", "Monaco")
-                       .style("font-size", 15)
+                       .style("font-size", 13)
                        .text(showLife ? "High Life Expectancy" : "High Pop. Number")
+                       .attr("x", 13)
                 
                 const legendMinMax = d3.extent(legendColorScale.domain());
                 // recover the min and max values from most kinds of numeric scales
