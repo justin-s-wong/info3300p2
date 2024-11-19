@@ -4,7 +4,6 @@
     <title>Life Expectancy vs Population</title>
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
-        /* Styles for gridlines, tooltip, controls, and text */
         .gridlines line {
             stroke: #ccc;
             stroke-opacity: 0.2;
@@ -29,8 +28,17 @@
             background: #f5f5f5;
             border-radius: 4px;
         }
-        #yearSlider {
-            width: 300px;
+        .sliderContainer {
+            margin: auto;
+            width: 50%;
+            padding: 15px;
+        }
+        .sliderValue {
+            margin: auto;
+            width: 50%;
+            border: 2px solid black;
+            padding: 10px;
+            text-align: center;
         }
         .axis-label {
             font-size: 20px;
@@ -49,9 +57,10 @@
 </head>
 <body>
     <div class="controls">
-        <!-- Slider for selecting year -->
-        <input type="range" id="yearSlider" min="1960" max="2022" value="1960" step="1">
-        <span id="yearDisplay">1960</span>
+        <div class="sliderContainer">
+            <input type="range" class="yearSlider" min="1960" max="2022" value="1960" step="1" style="width: 100%;">
+        </div>
+        <div class="sliderValue">Year: 1960</div>
     </div>
     <div id="visualization"></div>
 
@@ -283,19 +292,19 @@
                 });
 
             // Update the year display
-            d3.select("#yearDisplay").text(year);
+            d3.select(".sliderValue").text(`Year: ${year}`);
         }
 
         // Load data and initialize the visualization
         d3.json('combined_data.json').then(data => {
             update(data, "1960");
 
-            const slider = d3.select("#yearSlider");
+            const slider = d3.select(".yearSlider");
         
             slider.on("input", function() {
                 update(data, this.value);
             });
-        })
+        });
     </script>
 </body>
 </html>
