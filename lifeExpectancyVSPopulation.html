@@ -35,9 +35,20 @@
             border: 2px solid black;
             padding: 10px;
         }
-
+        .sliderContainer {
+            margin: auto;
+            width: 50%;
+            padding: 15px;
+        }
+        .sliderValue {
+            margin: auto;
+            width: 50%;
+            border: 2px solid black;
+            padding: 10px;
+            text-align: center;
+        }
         .axis-label {
-            font-size: 12px;
+            font-size: 20px;
         }
         .title {
             font-size: 18px;
@@ -46,8 +57,7 @@
         .size-legend text {
             font-size: 10px;
         }
-
-        .circle{
+        .circle {
             cursor: pointer;
         }
 
@@ -896,30 +906,36 @@
     </p>
     <p id = "p2">
     <script>
+        // Set dimensions and margins for the SVG
         const width = 800;  
         const height = 800;
         const margin = { top: 80, right: 110, bottom: 100, left: 100 };
         const innerWidth = width - margin.left - margin.right;
         const innerHeight = height - margin.top - margin.bottom;
 
+        // Create SVG container
         const svg = d3.select("#visualization")
             .append("svg")
             .attr("width", width)
             .attr("height", height);
 
+        // Create group for the plot area
         const g = svg.append("g")
             .attr("transform", `translate(${margin.left}, ${margin.top})`);
 
         const plotArea = g.append("g");
 
+        // Create group for the title
         const titleGroup = svg.append("g")
             .attr("transform", `translate(${width/2}, ${margin.top/2})`);
 
+        // Create tooltip for displaying data on hover
         const tooltip = d3.select("body")
             .append("div")
             .attr("class", "tooltip")
             .style("opacity", 0);
 
+        // Function to create size legend for population
         function createSizeLegend(scale, sizes) {
             const legend = svg.append("g")
                 .attr("class", "size-legend")
@@ -945,10 +961,10 @@
                     .attr("x", 25)
                     .attr("y", y + 5)
                     .text(d3.format(".0s")(size).replace("G", "B"));
-                    
             });
         }
 
+        // Function to update the visualization based on the selected year
         function update(data, year) {
             const countryData = data.objects.countries.geometries
                 .filter(d => d.properties[year])
@@ -958,16 +974,17 @@
                     population: d.properties[year].population
                 }));
 
+            // Define scales for x, y, radius, and color
             const xScale = d3.scaleLog()
                 .domain([
                     d3.min(countryData, d => d.population),
                     d3.max(countryData, d => d.population)
                 ])
-                .range([10, innerWidth-20])
+                .range([10, innerWidth-20]);
 
             const yScale = d3.scaleLinear()
                 .domain([0, d3.max(countryData, d => d.life)])
-                .range([innerHeight, 0])
+                .range([innerHeight, 0]);
 
             const radiusScale = d3.scaleSqrt()
                 .domain([
@@ -978,6 +995,7 @@
 
             const colorScale = d3.scaleOrdinal(d3.schemeTableau10);
 
+            // Remove existing size legend and create a new one
             svg.selectAll(".size-legend").remove();
             const popExtent = d3.extent(countryData, d => d.population);
             const legendSizes = [
@@ -987,6 +1005,7 @@
             ];
             createSizeLegend(radiusScale, legendSizes);
 
+            // Remove existing gridlines and add new ones
             plotArea.selectAll(".gridlines").remove();
             
             plotArea.append("g")
@@ -1004,6 +1023,7 @@
                     .tickSize(-innerHeight)
                     .tickFormat(""));
 
+            // Define x and y axes
             const xAxis = d3.axisBottom(xScale)
                 .ticks(5)
                 .tickFormat(d => d3.format(".0s")(d).replace("G", "B"));
@@ -1011,6 +1031,7 @@
             const yAxis = d3.axisLeft(yScale)
                 .ticks(10);
 
+            // Remove existing axes and add new ones
             g.selectAll("g.x-axis").remove();
             g.selectAll("g.y-axis").remove();
             
@@ -1028,6 +1049,7 @@
                 .attr("class", "y-axis")
                 .call(yAxis);
 
+            // Add axis labels
             g.selectAll(".axis-label").remove();
 
             g.append("text")
@@ -1045,12 +1067,14 @@
                 .attr("x", -innerHeight/2)
                 .text("Life Expectancy (years)");
 
+            // Update the title
             titleGroup.selectAll("text").remove();
             titleGroup.append("text")
                 .attr("class", "title")
                 .attr("text-anchor", "middle")
                 .text(`Life Expectancy vs. Population, ${year}`);
 
+            // Bind data to circles and update their attributes
             const circles = plotArea.selectAll("circle")
                 .data(countryData, d => d.name); 
 
@@ -1077,7 +1101,7 @@
                 .attr("r", d => radiusScale(d.population))
                 .call(() => plotArea.selectAll("circle").raise());  
                 
-
+            // Add interactivity for tooltips
             plotArea.selectAll("circle")
                 .on("mouseover", function(event, d) {
                     d3.select(this)
@@ -1111,6 +1135,7 @@
             d3.select("#yearDisplay").text("Year : " + year);
         }
 
+        // Load data and initialize the visualization
         d3.json('combined_data.json').then(data => {
             update(data, "1960");
 
@@ -1159,7 +1184,6 @@
     </p>
     <script>
         function switchTab(plotId) {
-            // Removes active class from all plots and buttons
             document.querySelectorAll('.plot').forEach(plot => {
                 plot.classList.remove('active');
             });
@@ -1167,7 +1191,6 @@
                 button.classList.remove('active');
             });
             
-            // Add active class to selected plot and its button
             document.getElementById(plotId).classList.add('active');
             document.querySelector(`[onclick="switchTab('${plotId}')"]`).classList.add('active');
         }
